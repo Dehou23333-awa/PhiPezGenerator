@@ -1,75 +1,69 @@
-# Nuxt Minimal Starter
+# Phigros PEZ下载器
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+一个基于 Vue 3 和 Nuxt 3 构建的网页应用，用于浏览 Phigros 谱面（包括音乐文件、插画和谱面），并支持将其打包下载为 `.pez` 格式。
 
-## Setup
+## 📦 项目概览
 
-Make sure to install dependencies:
+本应用旨在提供一个便捷的界面，帮助用户从 GitHub 仓库 `7aGiven/Phigros_Resource` 中查找和下载 Phigros 游戏的歌曲相关文件。用户可以搜索歌曲、查看详细信息，并选择特定难度的谱面进行下载。所有选定的文件（音乐、插画、选定的谱面）以及一份 `info.txt` 文件会被打包成一个 `.pez` 文件供下载。
 
-```bash
-# npm
-npm install
+## ✨ 功能特性
 
-# pnpm
-pnpm install
+* **歌曲浏览：** 显示所有可用的 Phigros 歌曲列表。
+* **歌曲搜索：** 根据歌曲名称或歌曲 ID 进行快速搜索。
+* **歌曲详情：** 查看歌曲的基本信息，如名称、作曲家和绘师。
+* **媒体文件显示：** 显示歌曲的音乐文件（`.ogg`）和对应的插画文件（`.png`，如果存在）。
+* **谱面选择：** 列出歌曲所有可用的谱面难度（EZ, HD, IN, AT），并允许用户选择一个特定的谱面。
+* **谱面信息：** 显示选定谱面的等级和制作者信息。
+* **`.PEZ` 包下载：** 将选定的音乐文件、插画文件（可选）、谱面文件（可选）以及一个包含歌曲元数据的 `info.txt` 文件打包成一个 `.pez` 格式的压缩包进行下载。
+* **下载进度提示：** 在下载过程中显示进度。
+* **加载与错误处理：** 提供友好的加载状态和错误消息提示。
 
-# yarn
-yarn install
+## 🛠️ 使用技术
 
-# bun
-bun install
-```
+* **前端框架：** Vue 3 (Composition API)
+* **元框架：** Nuxt 3 (`useRoute`, `useFetch` 等实用函数)
+* **文件压缩：** `jszip` (用于在客户端生成 ZIP 文件)
+* **文件保存：** `file-saver` (用于触发文件下载)
+* **数据源：** GitHub API (用于获取仓库文件结构) 和 GitHub Raw Content (用于下载文件和 TSV 数据)。
 
-## Development Server
+## 🚀 快速开始 (本地开发)
 
-Start the development server on `http://localhost:3000`:
+请确保您已安装 Node.js 和 npm/yarn。
 
-```bash
-# npm
-npm run dev
+1.  **克隆仓库：**
+    ```bash
+    git clone https://github.com/Dehou23333-awa/PhiPezGenerator
+    cd https://github.com/Dehou23333-awa/PhiPezGenerator
+    ```
+2.  **安装依赖：**
+    ```bash
+    npm install
+    ```
+3.  **运行开发服务器：**
+    ```bash
+    npm run dev
+    ```
+    应用将在 `http://localhost:3000` 运行。
 
-# pnpm
-pnpm dev
+4.  **构建生产版本 (可选)：**
+    ```bash
+    npm run build
+    ```
+    这将编译应用到 `.output` 目录，您可以使用 `npm run preview` 来预览生产版本。
 
-# yarn
-yarn dev
+## 📝 使用说明
 
-# bun
-bun run dev
-```
+1.  **浏览歌曲：** 访问应用首页，您将看到一个歌曲列表。
+2.  **搜索歌曲：** 在顶部的搜索框中输入歌曲名称或 ID，列表将实时更新以显示匹配的歌曲。
+3.  **查看并下载：** 点击歌曲列表中的任何歌曲名称，将跳转到该歌曲的下载页面。
+    * 下载页面会显示歌曲的详细信息、音乐文件和插画文件（如果存在）。
+    * 在“Chart Files”部分，如果存在多个谱面，您可以通过下拉菜单选择一个特定难度的谱面。选择后会显示该谱面的等级和制作者。
+    * 点击“Download Song Package (.PEZ)”按钮，应用程序将打包所有相关文件并提示您保存 `.pez` 文件。
+    * 下载过程中会显示进度。
 
-## Production
+## ⚠️ 注意事项
 
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+* 本应用依赖于 GitHub API 和 GitHub Raw Content 的可用性。如果 GitHub 服务出现问题，应用可能无法正常工作。
+* GitHub API 可能存在速率限制。频繁刷新页面或快速切换歌曲可能会触发此限制，导致数据加载失败。
+* 歌曲数据（`info.tsv` 和 `difficulty.tsv`）、音乐文件、插画文件和谱面文件均从 `7aGiven/Phigros_Resource` 仓库获取。请确保此仓库结构保持不变，否则可能导致文件无法找到。
+* 谱面目录的命名遵循 `歌曲ID.0` 的惯例（例如，歌曲 ID 为 `Calamity`，则其谱面目录为 `Calamity.0`）。
