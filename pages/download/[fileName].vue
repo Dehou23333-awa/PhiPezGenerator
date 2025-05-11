@@ -92,6 +92,10 @@ const levels = ["EZ", "HD", "IN", "AT"];
 const route = useRoute();
 const encodedFileName = route.params.fileName;
 
+// 获取运行时配置，其中包含你的 GitHub Token
+const config = useRuntimeConfig();
+const githubApiToken = config.githubToken;
+
 // Reactive state for download process
 const isDownloading = ref(false);
 const downloadError = ref(null);
@@ -176,7 +180,16 @@ const musicDownloadUrl = computed(() => {
 
 // --- Illustration Logic ---
 const illustrationApiUrl = 'https://api.github.com/repos/7aGiven/Phigros_Resource/git/trees/illustration?recursive=1';
-const { data: illustrationData, pending: illustrationPending, error: illustrationError } = useFetch(illustrationApiUrl);
+// 为此 useFetch 调用添加认证头
+const { data: illustrationData, pending: illustrationPending, error: illustrationError } = await useFetch(illustrationApiUrl, {
+  headers: (() => {
+    const headers = {};
+    if (githubApiToken) {
+      headers.Authorization = `Bearer ${githubApiToken}`;
+    }
+    return headers;
+  })()
+});
 
 const illustrationFileName = computed(() => {
   if (illustrationData.value && illustrationData.value.tree && decodedFileName.value) {
@@ -196,7 +209,16 @@ const illustrationDownloadUrl = computed(() => {
 
 // --- Chart Logic ---
 const chartTreeApiUrl = 'https://api.github.com/repos/7aGiven/Phigros_Resource/git/trees/chart';
-const { data: mainChartTreeData, pending: chartTreePending, error: chartTreeError } = useFetch(chartTreeApiUrl);
+// 为此 useFetch 调用添加认证头
+const { data: mainChartTreeData, pending: chartTreePending, error: chartTreeError } = await useFetch(chartTreeApiUrl, {
+  headers: (() => {
+    const headers = {};
+    if (githubApiToken) {
+      headers.Authorization = `Bearer ${githubApiToken}`;
+    } 
+    return headers;
+  })()
+});
 
 const chartDirectorySha = computed(() => {
   if (mainChartTreeData.value && mainChartTreeData.value.tree && decodedFileName.value) {
@@ -212,8 +234,19 @@ const chartSpecificApiUrl = computed(() => {
   return chartDirectorySha.value ? `https://api.github.com/repos/7aGiven/Phigros_Resource/git/trees/${chartDirectorySha.value}` : null;
 });
 
-const { data: specificChartData, pending: specificChartPending, error: specificChartError } = useFetch(
-  chartSpecificApiUrl, { watch: [chartDirectorySha] } // Re-fetch when SHA changes
+// 为此 useFetch 调用添加认证头
+const { data: specificChartData, pending: specificChartPending, error: specificChartError } = await useFetch(
+  chartSpecificApiUrl,
+  {
+    watch: [chartDirectorySha], // Re-fetch when SHA changes
+    headers: (() => {
+      const headers = {};
+      if (githubApiToken) {
+        headers.Authorization = `Bearer ${githubApiToken}`;
+      }
+      return headers;
+    })()
+  }
 );
 
 const chartFiles = computed(() => {

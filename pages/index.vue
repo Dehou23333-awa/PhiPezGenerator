@@ -43,18 +43,29 @@
 import { ref, computed } from 'vue';
 import { useFetch } from '#app';
 
+// 获取运行时配置，其中包含你的 GitHub Token
+const config = useRuntimeConfig();
+const githubApiToken = config.githubToken;
+
 // --- API URLs ---
 const musicFilesApiUrl = 'https://api.github.com/repos/7aGiven/Phigros_Resource/git/trees/music';
 const infoTsvUrl = 'https://raw.githubusercontent.com/7aGiven/Phigros_Resource/info/info.tsv';
 
 // --- Fetch Music Files ---
+// 为此 useFetch 调用添加认证头
 const {
   data: musicData,
   pending: musicPending,
   error: musicError
-} = await useFetch(musicFilesApiUrl);
+} = await useFetch(musicFilesApiUrl, {
+  // 只有当 githubApiToken 存在时才添加 headers
+  headers: githubApiToken ? {
+    Authorization: `Bearer ${githubApiToken}`
+  } : {}
+});
 
 // --- Fetch Info TSV Data ---
+// 此请求访问的是 raw content，不需要认证头
 const {
   data: infoTsvData,
   pending: infoPending,
