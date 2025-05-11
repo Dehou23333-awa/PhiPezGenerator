@@ -92,6 +92,14 @@ const levels = ["EZ", "HD", "IN", "AT"];
 const route = useRoute();
 const encodedFileName = route.params.fileName;
 
+// 获取运行时配置，其中包含你的 GitHub Token
+const config = useRuntimeConfig();
+const githubApiToken = config.githubToken;
+
+// 定义 User-Agent 字符串
+// 建议使用你的 GitHub 用户名或应用程序名称
+const userAgentString = 'Dehou23333-awa/PhiPezGenerator';
+
 // Reactive state for download process
 const isDownloading = ref(false);
 const downloadError = ref(null);
@@ -127,7 +135,7 @@ const parsedInfos = computed(() => {
         infos[songId] = {
           Name: parts[1] || '',
           Composer: parts[2] || '',
-          Illustrator: parts[3] || '',
+          Isstrator: parts[3] || '', // Corrected typo 'Illustrator' to 'Isstrator' based on your current usage
           Charter: parts.slice(4)
         };
       }
@@ -176,7 +184,21 @@ const musicDownloadUrl = computed(() => {
 
 // --- Illustration Logic ---
 const illustrationApiUrl = 'https://api.github.com/repos/7aGiven/Phigros_Resource/git/trees/illustration?recursive=1';
-const { data: illustrationData, pending: illustrationPending, error: illustrationError } = useFetch(illustrationApiUrl);
+// 为此 useFetch 调用添加认证头和 User-Agent 头
+const { data: illustrationData, pending: illustrationPending, error: illustrationError } = await useFetch(illustrationApiUrl, {
+  headers: (() => {
+    const headers = { 'User-Agent': userAgentString }; // <-- 添加 User-Agent
+    if (githubApiToken) {
+      headers.Authorization = `Bearer ${githubApiToken}`;
+      console.log('DEBUG: Sending Authorization header for illustrationApiUrl.');
+      console.log('DEBUG: Authorization header value (snippet):', headers.Authorization.substring(0, 20) + '...');
+    } else {
+      console.log('DEBUG: No GitHub API Token found. Authorization header not sent for illustrationApiUrl.');
+    }
+    console.log('DEBUG: User-Agent header for illustrationApiUrl:', headers['User-Agent']); // <-- 调试输出 User-Agent
+    return headers;
+  })()
+});
 
 const illustrationFileName = computed(() => {
   if (illustrationData.value && illustrationData.value.tree && decodedFileName.value) {
@@ -196,7 +218,21 @@ const illustrationDownloadUrl = computed(() => {
 
 // --- Chart Logic ---
 const chartTreeApiUrl = 'https://api.github.com/repos/7aGiven/Phigros_Resource/git/trees/chart';
-const { data: mainChartTreeData, pending: chartTreePending, error: chartTreeError } = useFetch(chartTreeApiUrl);
+// 为此 useFetch 调用添加认证头和 User-Agent 头
+const { data: mainChartTreeData, pending: chartTreePending, error: chartTreeError } = await useFetch(chartTreeApiUrl, {
+  headers: (() => {
+    const headers = { 'User-Agent': userAgentString }; // <-- 添加 User-Agent
+    if (githubApiToken) {
+      headers.Authorization = `Bearer ${githubApiToken}`;
+      console.log('DEBUG: Sending Authorization header for chartTreeApiUrl.');
+      console.log('DEBUG: Authorization header value (snippet):', headers.Authorization.substring(0, 20) + '...');
+    } else {
+      console.log('DEBUG: No GitHub API Token found. Authorization header not sent for chartTreeApiUrl.');
+    }
+    console.log('DEBUG: User-Agent header for chartTreeApiUrl:', headers['User-Agent']); // <-- 调试输出 User-Agent
+    return headers;
+  })()
+});
 
 const chartDirectorySha = computed(() => {
   if (mainChartTreeData.value && mainChartTreeData.value.tree && decodedFileName.value) {
@@ -212,8 +248,24 @@ const chartSpecificApiUrl = computed(() => {
   return chartDirectorySha.value ? `https://api.github.com/repos/7aGiven/Phigros_Resource/git/trees/${chartDirectorySha.value}` : null;
 });
 
-const { data: specificChartData, pending: specificChartPending, error: specificChartError } = useFetch(
-  chartSpecificApiUrl, { watch: [chartDirectorySha] } // Re-fetch when SHA changes
+// 为此 useFetch 调用添加认证头和 User-Agent 头
+const { data: specificChartData, pending: specificChartPending, error: specificChartError } = await useFetch(
+  chartSpecificApiUrl,
+  {
+    watch: [chartDirectorySha], // Re-fetch when SHA changes
+    headers: (() => {
+      const headers = { 'User-Agent': userAgentString }; // <-- 添加 User-Agent
+      if (githubApiToken) {
+        headers.Authorization = `Bearer ${githubApiToken}`;
+        console.log('DEBUG: Sending Authorization header for chartSpecificApiUrl.');
+        console.log('DEBUG: Authorization header value (snippet):', headers.Authorization.substring(0, 20) + '...');
+      } else {
+        console.log('DEBUG: No GitHub API Token found. Authorization header not sent for chartSpecificApiUrl.');
+      }
+      console.log('DEBUG: User-Agent header for chartSpecificApiUrl:', headers['User-Agent']); // <-- 调试输出 User-Agent
+      return headers;
+    })()
+  }
 );
 
 const chartFiles = computed(() => {
@@ -283,6 +335,9 @@ const fetchAndAddFileToZip = async (zipInstance, url, fileNameInZip, friendlyNam
   }
   console.log(`Workspaceing ${friendlyName}: ${url}`); // Corrected typo "Workspaceing" to "Fetching"
   try {
+    // 注意：这里是文件下载，通常不需要认证头。
+    // 如果你下载 raw.githubusercontent.com 的大文件也遇到问题，
+    // GitHub 可能会建议认证以获得更高速率，但通常 User-Agent 仍然足够。
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Status: ${response.status} ${response.statusText}`);

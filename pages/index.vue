@@ -47,25 +47,38 @@ import { useFetch } from '#app';
 const config = useRuntimeConfig();
 const githubApiToken = config.githubToken;
 
+// 定义 User-Agent 字符串
+// 建议使用你的 GitHub 用户名或应用程序名称
+const userAgentString = 'Dehou23333-awa/PhiPezGenerator';
+
 // --- API URLs ---
 const musicFilesApiUrl = 'https://api.github.com/repos/7aGiven/Phigros_Resource/git/trees/music';
 const infoTsvUrl = 'https://raw.githubusercontent.com/7aGiven/Phigros_Resource/info/info.tsv';
 
 // --- Fetch Music Files ---
-// 为此 useFetch 调用添加认证头
+// 为此 useFetch 调用添加认证头和 User-Agent 头
 const {
   data: musicData,
   pending: musicPending,
   error: musicError
 } = await useFetch(musicFilesApiUrl, {
-  // 只有当 githubApiToken 存在时才添加 headers
-  headers: githubApiToken ? {
-    Authorization: `Bearer ${githubApiToken}`
-  } : {}
+  // 只有当 githubApiToken 存在时才添加 Authorization 头
+  headers: (() => {
+    const headers = { 'User-Agent': userAgentString }; // <-- 添加 User-Agent
+    if (githubApiToken) {
+      headers.Authorization = `Bearer ${githubApiToken}`;
+      console.log('DEBUG: Sending Authorization header for musicFilesApiUrl.');
+      console.log('DEBUG: Authorization header value (snippet):', headers.Authorization.substring(0, 20) + '...');
+    } else {
+      console.log('DEBUG: No GitHub API Token found. Authorization header not sent for musicFilesApiUrl.');
+    }
+    console.log('DEBUG: User-Agent header for musicFilesApiUrl:', headers['User-Agent']); // <-- 调试输出 User-Agent
+    return headers;
+  })()
 });
 
 // --- Fetch Info TSV Data ---
-// 此请求访问的是 raw content，不需要认证头
+// 此请求访问的是 raw content，不需要认证头或 User-Agent（浏览器会自动添加，服务器端也可以不加）
 const {
   data: infoTsvData,
   pending: infoPending,
@@ -114,7 +127,7 @@ const filteredFiles = computed(() => {
   const query = searchQuery.value.toLowerCase();
   return displayFiles.value.filter(song =>
     song.name.toLowerCase().includes(query) || // Search by song name
-    song.id.toLowerCase().includes(query)     // Search by song ID
+    song.id.toLowerCase().includes(query)      // Search by song ID
   );
 });
 
