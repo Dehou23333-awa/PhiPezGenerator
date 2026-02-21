@@ -9,6 +9,9 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
   },
+  "devDependencies": {
+    "@types/node": "^18.0.0 || ^20.0.0 || >=22.0.0"
+  },
   "dependencies": {
     "d3-fetch": "^3.0.1",
     "file-saver": "^2.0.5",
