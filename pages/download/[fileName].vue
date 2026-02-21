@@ -13,7 +13,7 @@
       <div v-else-if="currentSongInfo">
         <p><strong>Name:</strong> {{ currentSongInfo.Name }}</p>
         <p><strong>Composer:</strong> {{ currentSongInfo.Composer }}</p>
-        <p><strong>Illustrator:</strong> {{ currentSongInfo.Illustrator }}</p>
+        <p><strong>Illustrator:</strong> {{ currentSongInfo.illustrator }}</p>
       </div>
       <div v-else>
         <p class="status-message">Song details not found for this ID.</p>
@@ -92,14 +92,6 @@ const levels = ["EZ", "HD", "IN", "AT"];
 const route = useRoute();
 const encodedFileName = route.params.fileName;
 
-// 获取运行时配置，其中包含你的 GitHub Token
-const config = useRuntimeConfig();
-const githubApiToken = config.githubToken;
-
-// 定义 User-Agent 字符串
-// 建议使用你的 GitHub 用户名或应用程序名称
-const userAgentString = 'Dehou23333-awa/PhiPezGenerator';
-
 // Reactive state for download process
 const isDownloading = ref(false);
 const downloadError = ref(null);
@@ -115,186 +107,64 @@ const decodedFileName = computed(() => {
   return '';
 });
 
-// --- TSV Data Fetching and Parsing ---
-const infoTsvUrl = 'https://raw.githubusercontent.com/7aGiven/Phigros_Resource/info/info.tsv';
-const difficultyTsvUrl = 'https://raw.githubusercontent.com/7aGiven/Phigros_Resource/info/difficulty.tsv';
+// --- Chart Info Data Fetching ---
+const chartInfoUrl = 'https://raw.githubusercontent.com/Dehou23333-awa/PhiResources/main/Chart_info.json';
+const { data: chartInfoData, pending: infoPending, error: infoError } = useFetch(chartInfoUrl);
 
-const { data: infoTsvData, pending: infoPending, error: infoError } = useFetch(infoTsvUrl);
-const { data: difficultyTsvData, pending: difficultyPending, error: difficultyError } = useFetch(difficultyTsvUrl);
-
-const parsedInfos = computed(() => {
-  const infos = {};
-
-  // Parse info.tsv
-  if (infoTsvData.value) {
-    const lines = infoTsvData.value.trim().split('\n');
-    lines.forEach(line => {
-      const parts = line.split('\t');
-      if (parts.length > 0) {
-        const songId = parts[0];
-        infos[songId] = {
-          Name: parts[1] || '',
-          Composer: parts[2] || '',
-          Isstrator: parts[3] || '', // Corrected typo 'Illustrator' to 'Isstrator' based on your current usage
-          Charter: parts.slice(4)
-        };
-      }
-    });
-  }
-
-  // Parse difficulty.tsv and merge
-  if (difficultyTsvData.value) {
-    const lines = difficultyTsvData.value.trim().split('\n');
-    lines.forEach(line => {
-      const parts = line.split('\t');
-      if (parts.length > 0 && infos[parts[0]]) {
-        const songId = parts[0];
-        // Ensure difficulty array matches 'levels' length, padding with '0' if shorter
-        infos[songId].difficulty = parts.slice(1).concat(Array(levels.length).fill('0')).slice(0, levels.length);
-      }
-    });
-  }
-
-  // Post-processing to ensure all required fields are populated
-  for (const songId in infos) {
-    const song = infos[songId];
-    if (!song.difficulty) {
-      song.difficulty = Array(levels.length).fill('0');
-    }
-    if (!song.Charter) {
-      song.Charter = Array(levels.length).fill('未知');
-    }
-    // Ensure Charter array matches 'levels' length, padding with '未知'
-    while (song.Charter.length < levels.length) {
-      song.Charter.push('未知');
-    }
-  }
-
-  return infos;
-});
+// Kept for template compatibility (no separate difficulty fetch needed)
+const difficultyPending = ref(false);
+const difficultyError = ref(null);
 
 const currentSongInfo = computed(() => {
-  return decodedFileName.value && parsedInfos.value ? parsedInfos.value[decodedFileName.value] || null : null;
+  if (chartInfoData.value && chartInfoData.value.Songs && decodedFileName.value) {
+    return chartInfoData.value.Songs[decodedFileName.value] || null;
+  }
+  return null;
 });
 
 // --- Music File URL ---
 const musicDownloadUrl = computed(() => {
-  return decodedFileName.value ? `https://raw.githubusercontent.com/7aGiven/Phigros_Resource/music/${decodedFileName.value}.ogg` : null;
+  return decodedFileName.value
+    ? `https://raw.githubusercontent.com/Dehou23333-awa/PhiResources/main/music/${decodedFileName.value}.ogg`
+    : null;
 });
 
 // --- Illustration Logic ---
-const illustrationApiUrl = 'https://api.github.com/repos/7aGiven/Phigros_Resource/git/trees/illustration?recursive=1';
-// 为此 useFetch 调用添加认证头和 User-Agent 头
-const { data: illustrationData, pending: illustrationPending, error: illustrationError } = await useFetch(illustrationApiUrl, {
-  headers: (() => {
-    const headers = { 'User-Agent': userAgentString }; // <-- 添加 User-Agent
-    if (githubApiToken) {
-      headers.Authorization = `Bearer ${githubApiToken}`;
-      console.log('DEBUG: Sending Authorization header for illustrationApiUrl.');
-      console.log('DEBUG: Authorization header value (snippet):', headers.Authorization.substring(0, 20) + '...');
-    } else {
-      console.log('DEBUG: No GitHub API Token found. Authorization header not sent for illustrationApiUrl.');
-    }
-    console.log('DEBUG: User-Agent header for illustrationApiUrl:', headers['User-Agent']); // <-- 调试输出 User-Agent
-    return headers;
-  })()
-});
+// Kept for template compatibility (illustration URL is computed directly)
+const illustrationPending = ref(false);
+const illustrationError = ref(null);
 
 const illustrationFileName = computed(() => {
-  if (illustrationData.value && illustrationData.value.tree && decodedFileName.value) {
-    const foundItem = illustrationData.value.tree.find(item =>
-      item.type === 'blob' &&
-      item.path.startsWith(decodedFileName.value) &&
-      item.path.toLowerCase().endsWith('.png')
-    );
-    return foundItem ? foundItem.path : null;
-  }
-  return null;
+  return decodedFileName.value ? `${decodedFileName.value}.png` : null;
 });
 
 const illustrationDownloadUrl = computed(() => {
-  return illustrationFileName.value ? `https://raw.githubusercontent.com/7aGiven/Phigros_Resource/illustration/${illustrationFileName.value}` : null;
+  return illustrationFileName.value
+    ? `https://raw.githubusercontent.com/Dehou23333-awa/PhiResources/main/ill/${illustrationFileName.value}`
+    : null;
 });
 
 // --- Chart Logic ---
-const chartTreeApiUrl = 'https://api.github.com/repos/7aGiven/Phigros_Resource/git/trees/chart';
-// 为此 useFetch 调用添加认证头和 User-Agent 头
-const { data: mainChartTreeData, pending: chartTreePending, error: chartTreeError } = await useFetch(chartTreeApiUrl, {
-  headers: (() => {
-    const headers = { 'User-Agent': userAgentString }; // <-- 添加 User-Agent
-    if (githubApiToken) {
-      headers.Authorization = `Bearer ${githubApiToken}`;
-      console.log('DEBUG: Sending Authorization header for chartTreeApiUrl.');
-      console.log('DEBUG: Authorization header value (snippet):', headers.Authorization.substring(0, 20) + '...');
-    } else {
-      console.log('DEBUG: No GitHub API Token found. Authorization header not sent for chartTreeApiUrl.');
-    }
-    console.log('DEBUG: User-Agent header for chartTreeApiUrl:', headers['User-Agent']); // <-- 调试输出 User-Agent
-    return headers;
-  })()
-});
-
-const chartDirectorySha = computed(() => {
-  if (mainChartTreeData.value && mainChartTreeData.value.tree && decodedFileName.value) {
-    const foundDir = mainChartTreeData.value.tree.find(item =>
-      item.type === 'tree' && item.path === decodedFileName.value + '.0' // Convention for chart directory name
-    );
-    return foundDir ? foundDir.sha : null;
-  }
-  return null;
-});
-
-const chartSpecificApiUrl = computed(() => {
-  return chartDirectorySha.value ? `https://api.github.com/repos/7aGiven/Phigros_Resource/git/trees/${chartDirectorySha.value}` : null;
-});
-
-// 为此 useFetch 调用添加认证头和 User-Agent 头
-const { data: specificChartData, pending: specificChartPending, error: specificChartError } = await useFetch(
-  chartSpecificApiUrl,
-  {
-    watch: [chartDirectorySha], // Re-fetch when SHA changes
-    headers: (() => {
-      const headers = { 'User-Agent': userAgentString }; // <-- 添加 User-Agent
-      if (githubApiToken) {
-        headers.Authorization = `Bearer ${githubApiToken}`;
-        console.log('DEBUG: Sending Authorization header for chartSpecificApiUrl.');
-        console.log('DEBUG: Authorization header value (snippet):', headers.Authorization.substring(0, 20) + '...');
-      } else {
-        console.log('DEBUG: No GitHub API Token found. Authorization header not sent for chartSpecificApiUrl.');
-      }
-      console.log('DEBUG: User-Agent header for chartSpecificApiUrl:', headers['User-Agent']); // <-- 调试输出 User-Agent
-      return headers;
-    })()
-  }
-);
+const chartPending = computed(() => infoPending.value);
+const chartError = computed(() => infoError.value);
 
 const chartFiles = computed(() => {
-  if (specificChartData.value && specificChartData.value.tree) {
-    // Filter for JSON files and sort by difficulty level (EZ, HD, IN, AT)
-    return specificChartData.value.tree.filter(item =>
-      item.type === 'blob' && item.path.toLowerCase().endsWith('.json')
-    ).sort((a, b) => {
-      const levelA = a.path.replace('.json', '').toUpperCase();
-      const levelB = b.path.replace('.json', '').toUpperCase();
-      return levels.indexOf(levelA) - levels.indexOf(levelB);
-    });
-  }
-  return [];
+  if (!currentSongInfo.value) return [];
+  return levels
+    .filter(level => currentSongInfo.value[level])
+    .map(level => ({ path: `${level}.json` }));
 });
-
-const chartPending = computed(() => chartTreePending.value || specificChartPending.value);
-const chartError = computed(() => chartTreeError.value || specificChartError.value);
 
 const selectedChartFileName = ref('');
 
 const selectedChartInfo = computed(() => {
   if (selectedChartFileName.value && currentSongInfo.value) {
     const difficultyKey = selectedChartFileName.value.replace('.json', '').toUpperCase();
-    const levelIndex = levels.indexOf(difficultyKey);
-    if (levelIndex !== -1 && currentSongInfo.value.difficulty && currentSongInfo.value.Charter) {
+    const levelData = currentSongInfo.value[difficultyKey];
+    if (levelData) {
       return {
-        level: currentSongInfo.value.difficulty[levelIndex] || '?',
-        charter: currentSongInfo.value.Charter[levelIndex] || '未知'
+        level: levelData.difficulty || '?',
+        charter: levelData.charter || '未知'
       };
     }
   }
@@ -303,19 +173,19 @@ const selectedChartInfo = computed(() => {
 
 const selectedChartDownloadUrl = computed(() => {
   if (selectedChartFileName.value && decodedFileName.value) {
-    return `https://raw.githubusercontent.com/7aGiven/Phigros_Resource/chart/${decodedFileName.value}.0/${selectedChartFileName.value}`;
+    return `https://raw.githubusercontent.com/Dehou23333-awa/PhiResources/main/chart/${decodedFileName.value}.0/${selectedChartFileName.value}`;
   }
   return null;
 });
 
 const formatChartOption = (chartPath) => {
   const difficultyKey = chartPath.replace('.json', '').toUpperCase();
-  const levelIndex = levels.indexOf(difficultyKey);
   let display = difficultyKey;
-  if (levelIndex !== -1 && currentSongInfo.value && currentSongInfo.value.difficulty) {
-    display += ` Lv.${currentSongInfo.value.difficulty[levelIndex] || '?'}`;
-    if (currentSongInfo.value.Charter && currentSongInfo.value.Charter[levelIndex]) {
-      display += ` - ${currentSongInfo.value.Charter[levelIndex]}`;
+  if (currentSongInfo.value && currentSongInfo.value[difficultyKey]) {
+    const levelData = currentSongInfo.value[difficultyKey];
+    display += ` Lv.${levelData.difficulty || '?'}`;
+    if (levelData.charter) {
+      display += ` - ${levelData.charter}`;
     }
   }
   return display;
@@ -333,11 +203,8 @@ const fetchAndAddFileToZip = async (zipInstance, url, fileNameInZip, friendlyNam
       return;
     }
   }
-  console.log(`Workspaceing ${friendlyName}: ${url}`); // Corrected typo "Workspaceing" to "Fetching"
+  console.log(`Fetching ${friendlyName}: ${url}`);
   try {
-    // 注意：这里是文件下载，通常不需要认证头。
-    // 如果你下载 raw.githubusercontent.com 的大文件也遇到问题，
-    // GitHub 可能会建议认证以获得更高速率，但通常 User-Agent 仍然足够。
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Status: ${response.status} ${response.statusText}`);
@@ -361,11 +228,7 @@ const isDownloadDisabled = computed(() => {
     !decodedFileName.value ||
     !currentSongInfo.value || // Ensure song info is loaded
     infoPending.value ||
-    difficultyPending.value ||
     infoError.value ||
-    difficultyError.value ||
-    illustrationPending.value || // Wait for illustration search to complete
-    chartPending.value || // Wait for chart search to complete
     (chartFiles.value.length > 0 && !selectedChartFileName.value) || // If charts exist, one must be selected
     (chartFiles.value.length === 0 && !musicDownloadUrl.value) // If no charts, at least music file should be available
   );
@@ -390,7 +253,6 @@ const downloadCombinedFiles = async () => {
     const selectedDifficultyKey = selectedChartFileName.value ? selectedChartFileName.value.replace('.json', '').toUpperCase() : 'N/A';
 
     // 1. Generate and add info.txt
-    // Provide sensible defaults if selectedChartInfo is null (e.g., if no charts exist for the song)
     const infoTxtContent = `#
 Name: ${currentSongInfo.value.Name}
 Song: ${decodedFileName.value}.ogg
@@ -398,7 +260,7 @@ Picture: ${decodedFileName.value}.png
 Chart: ${selectedChartFileName.value || 'N/A'}
 Level: ${selectedDifficultyKey} Lv.${selectedChartInfo.value?.level || '?'}
 Composer: ${currentSongInfo.value.Composer}
-Illustrator: ${currentSongInfo.value.Illustrator}
+Illustrator: ${currentSongInfo.value.illustrator}
 Charter: ${selectedChartInfo.value?.charter || '未知'}`;
 
     zip.file("info.txt", infoTxtContent);

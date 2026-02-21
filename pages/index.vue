@@ -6,7 +6,7 @@
       <p class="status-message">Loading music library...</p>
     </div>
     <div v-else-if="hasError" class="status-area">
-      <p class="error-message">Error loading music library: {{ musicError?.message || infoError?.message }}</p>
+      <p class="error-message">Error loading music library: {{ chartInfoError?.message }}</p>
       <p class="status-message">Please try refreshing the page.</p>
     </div>
     <div v-else class="content-wrapper"> <div class="search-area">
@@ -43,76 +43,22 @@
 import { ref, computed } from 'vue';
 import { useFetch } from '#app';
 
-// 获取运行时配置，其中包含你的 GitHub Token
-const config = useRuntimeConfig();
-const githubApiToken = config.githubToken;
+// --- API URL ---
+const chartInfoUrl = 'https://raw.githubusercontent.com/Dehou23333-awa/PhiResources/main/Chart_info.json';
 
-// 定义 User-Agent 字符串
-// 建议使用你的 GitHub 用户名或应用程序名称
-const userAgentString = 'Dehou23333-awa/PhiPezGenerator';
-
-// --- API URLs ---
-const musicFilesApiUrl = 'https://api.github.com/repos/7aGiven/Phigros_Resource/git/trees/music';
-const infoTsvUrl = 'https://raw.githubusercontent.com/7aGiven/Phigros_Resource/info/info.tsv';
-
-// --- Fetch Music Files ---
-// 为此 useFetch 调用添加认证头和 User-Agent 头
+// --- Fetch Chart Info ---
 const {
-  data: musicData,
-  pending: musicPending,
-  error: musicError
-} = await useFetch(musicFilesApiUrl, {
-  // 只有当 githubApiToken 存在时才添加 Authorization 头
-  headers: (() => {
-    const headers = { 'User-Agent': userAgentString }; // <-- 添加 User-Agent
-    if (githubApiToken) {
-      headers.Authorization = `Bearer ${githubApiToken}`;
-      console.log('DEBUG: Sending Authorization header for musicFilesApiUrl.');
-      console.log('DEBUG: Authorization header value (snippet):', headers.Authorization.substring(0, 20) + '...');
-    } else {
-      console.log('DEBUG: No GitHub API Token found. Authorization header not sent for musicFilesApiUrl.');
-    }
-    console.log('DEBUG: User-Agent header for musicFilesApiUrl:', headers['User-Agent']); // <-- 调试输出 User-Agent
-    return headers;
-  })()
-});
-
-// --- Fetch Info TSV Data ---
-// 此请求访问的是 raw content，不需要认证头或 User-Agent（浏览器会自动添加，服务器端也可以不加）
-const {
-  data: infoTsvData,
-  pending: infoPending,
-  error: infoError
-} = await useFetch(infoTsvUrl);
-
-// --- Parse Info TSV Data ---
-const parsedSongNames = computed(() => {
-  const namesMap = {};
-  if (infoTsvData.value) {
-    const lines = infoTsvData.value.trim().split('\n');
-    lines.forEach(line => {
-      const parts = line.split('\t');
-      if (parts.length > 1) { // Ensure at least song ID and Name exist
-        const songId = parts[0];
-        const songName = parts[1];
-        namesMap[songId] = songName;
-      }
-    });
-  }
-  return namesMap;
-});
+  data: chartInfoData,
+  pending: chartInfoPending,
+  error: chartInfoError
+} = await useFetch(chartInfoUrl);
 
 // --- Prepare Display Files (All songs, before filtering) ---
 const displayFiles = computed(() => {
-  if (musicData.value && musicData.value.tree && parsedSongNames.value) {
-    return musicData.value.tree
-      .filter(item => item.type === 'blob' && item.path.endsWith('.ogg')) // Only consider .ogg files
-      .map(item => {
-        const fileName = item.path.replace(/\.ogg$/, ''); // Get the song ID (e.g., "Calamity")
-        const songName = parsedSongNames.value[fileName] || fileName; // Use name from info.tsv, fallback to ID if not found
-        return { id: fileName, name: songName };
-      })
-      .sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically by song name
+  if (chartInfoData.value && chartInfoData.value.Songs) {
+    return Object.entries(chartInfoData.value.Songs)
+      .map(([id, song]) => ({ id, name: song.Name || id }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
   return [];
 });
@@ -132,8 +78,8 @@ const filteredFiles = computed(() => {
 });
 
 // --- Consolidated Loading and Error States ---
-const isLoading = computed(() => musicPending.value || infoPending.value);
-const hasError = computed(() => musicError.value || infoError.value);
+const isLoading = computed(() => chartInfoPending.value);
+const hasError = computed(() => chartInfoError.value);
 </script>
 
 <style scoped>
