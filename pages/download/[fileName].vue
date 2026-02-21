@@ -109,7 +109,7 @@ const decodedFileName = computed(() => {
 
 // --- Chart Info Data Fetching ---
 const chartInfoUrl = 'https://raw.githubusercontent.com/Dehou23333-awa/PhiResources/main/Chart_info.json';
-const { data: chartInfoData, pending: infoPending, error: infoError } = useFetch(chartInfoUrl);
+const { data: chartInfoData, pending: infoPending, error: infoError } = useFetch(chartInfoUrl, { parseResponse: JSON.parse });
 
 // Kept for template compatibility (no separate difficulty fetch needed)
 const difficultyPending = ref(false);

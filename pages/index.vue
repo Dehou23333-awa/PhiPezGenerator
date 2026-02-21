@@ -51,7 +51,7 @@ const {
   data: chartInfoData,
   pending: chartInfoPending,
   error: chartInfoError
-} = await useFetch(chartInfoUrl);
+} = await useFetch(chartInfoUrl, { parseResponse: JSON.parse });
 
 // --- Prepare Display Files (All songs, before filtering) ---
 const displayFiles = computed(() => {
